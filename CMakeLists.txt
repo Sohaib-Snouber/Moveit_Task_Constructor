@@ -9,7 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(moveit_task_constructor_core REQUIRED)
 find_package(rclcpp REQUIRED)
-
+find_package(moveit_visual_tools REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -18,6 +18,7 @@ add_executable(mtc_tutorial src/mtc_tutorial.cpp)
 ament_target_dependencies(mtc_tutorial 
   moveit_task_constructor_core
   rclcpp
+  moveit_visual_tools
 )
 
 add_executable(full_mtc src/full_mtc.cpp)
