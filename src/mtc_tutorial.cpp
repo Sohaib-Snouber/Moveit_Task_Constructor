@@ -320,18 +320,28 @@ mtc::Task MTCTaskNode::createTask()
                                    true);
   task.add(std::move(allow_collision));
 
+  // Allow collision (object, table) temporarily
+  auto allow_collision_object_table = std::make_unique<mtc::stages::ModifyPlanningScene>("allow collision (object, table)");
+  allow_collision_object_table->allowCollisions("object", {"table"}, true);
+  task.add(std::move(allow_collision_object_table));
+
   // Close hand
   auto stage_close_hand = std::make_unique<mtc::stages::MoveTo>("close hand", sampling_planner);
   stage_close_hand->setGroup(hand_group_name);
   stage_close_hand->setGoal("close");
   task.add(std::move(stage_close_hand));
 
+  // Attach object to the gripper
+  auto attach_object = std::make_unique<mtc::stages::ModifyPlanningScene>("attach object");
+  attach_object->attachObject("object", hand_frame);
+  task.add(std::move(attach_object));
+
   // Lift object slightly to avoid collision with the table
   auto lift_object = std::make_unique<mtc::stages::MoveRelative>("lift object", cartesian_planner);
   lift_object->properties().set("marker_ns", "lift_object");
   lift_object->properties().set("link", hand_frame);
   lift_object->properties().configureInitFrom(mtc::Stage::PARENT, { "group" });
-  lift_object->setMinMaxDistance(0.1, 0.15);
+  lift_object->setMinMaxDistance(0.1, 0.15); // Increase lift height
 
   // Set lift direction
   geometry_msgs::msg::Vector3Stamped lift_direction;
@@ -340,19 +350,21 @@ mtc::Task MTCTaskNode::createTask()
   lift_object->setDirection(lift_direction);
   task.add(std::move(lift_object));
 
-  // Attach object to the gripper
-  auto attach_object = std::make_unique<mtc::stages::ModifyPlanningScene>("attach object");
-  attach_object->attachObject("object", hand_frame);
-  task.add(std::move(attach_object));
+  
 
-  // Re-enable collision checking after grasping and lifting
+  // Re-enable collision (object, table) after lifting
+  auto reenable_collision_object_table = std::make_unique<mtc::stages::ModifyPlanningScene>("reenable collision (object, table)");
+  reenable_collision_object_table->allowCollisions("object", {"table"}, false);
+  task.add(std::move(reenable_collision_object_table));
+
+  /* // Re-enable collision checking after grasping and lifting
   auto reenable_collision = std::make_unique<mtc::stages::ModifyPlanningScene>("reenable collision (hand, object)");
   reenable_collision->allowCollisions("object",
                                       task.getRobotModel()
                                           ->getJointModelGroup(hand_group_name)
                                           ->getLinkModelNamesWithCollisionGeometry(),
                                       false);
-  task.add(std::move(reenable_collision));
+  task.add(std::move(reenable_collision)); */
   
   return task;
 }
