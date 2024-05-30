@@ -20,12 +20,20 @@ ament_target_dependencies(mtc_tutorial
   rclcpp
 )
 
+add_executable(full_mtc src/full_mtc.cpp)
+ament_target_dependencies(full_mtc 
+  moveit_task_constructor_core
+  rclcpp
+)
+
 target_include_directories(mtc_tutorial PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(mtc_tutorial PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 install(TARGETS mtc_tutorial
+  DESTINATION lib/${PROJECT_NAME})
+install(TARGETS full_mtc
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch

@@ -79,7 +79,7 @@ void MTCTaskNode::doTask()
     return;
   }
 
-  if (!task_.plan(5))
+  if (!task_.plan(10))
   {
     RCLCPP_ERROR_STREAM(LOGGER, "Task planning failed");
     return;
@@ -111,16 +111,6 @@ mtc::Task MTCTaskNode::createTask()
   task.setProperty("eef", hand_group_name);
   task.setProperty("ik_frame", hand_frame);
 
-// Disable warnings for this line, as it's a variable that's set but not used in this example
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
-  mtc::Stage* current_state_ptr = nullptr;  // Forward current_state on to grasp pose generator
-#pragma GCC diagnostic pop
-
-  auto stage_state_current = std::make_unique<mtc::stages::CurrentState>("current");
-  current_state_ptr = stage_state_current.get();
-  task.add(std::move(stage_state_current));
-
   auto sampling_planner = std::make_shared<mtc::solvers::PipelinePlanner>(node_);
   auto interpolation_planner = std::make_shared<mtc::solvers::JointInterpolationPlanner>();
 
@@ -129,14 +119,77 @@ mtc::Task MTCTaskNode::createTask()
   cartesian_planner->setMaxAccelerationScalingFactor(1.0);
   cartesian_planner->setStepSize(.01);
 
-  auto stage_open_hand =
-      std::make_unique<mtc::stages::MoveTo>("close hand", interpolation_planner);
-  stage_open_hand->setGroup(hand_group_name);
-  stage_open_hand->setGoal("close");
-  task.add(std::move(stage_open_hand));
+  // Current state
+  auto stage_state_current = std::make_unique<mtc::stages::CurrentState>("current");
+  task.add(std::move(stage_state_current));
+
+  // Close hand
+  auto stage_close_hand = std::make_unique<mtc::stages::MoveTo>("open hand", sampling_planner);
+  stage_close_hand->setGroup(hand_group_name);
+  stage_close_hand->setGoal("open");
+  task.add(std::move(stage_close_hand));
+
+  // Define the target pose
+  auto const target_pose = []{
+	  geometry_msgs::msg::PoseStamped msg;
+    msg.header.frame_id = "world";
+	  
+    // Define roll, pitch, and yaw angles in radians
+	  double roll = 0.0;  // Rotation around the x-axis
+	  double pitch = M_PI/2.0;  // Rotation around the y-axis (90 degrees)
+	  double yaw = 0.0;  // Rotation around the z-axis
+	  // Convert roll, pitch, yaw to quaternion
+	  tf2::Quaternion q;
+	  q.setRPY(roll, pitch, yaw);
+
+	  msg.pose.orientation.x = q.x();
+    msg.pose.orientation.y = q.y();
+    msg.pose.orientation.z = q.z();
+    msg.pose.orientation.w = q.w();
+	  msg.pose.position.x = 0.5;
+	  msg.pose.position.y = -0.00;  //to 10mm slide move to got to grasp the object
+	  msg.pose.position.z = 0.0;
+	  return msg;
+	}();
+  
+  // Move to target pose
+  auto move_to_target = std::make_unique<mtc::stages::MoveTo>("move to target", sampling_planner);
+  move_to_target->setGroup(arm_group_name);
+  move_to_target->setGoal(target_pose);
+  task.add(std::move(move_to_target));
+
+  // Define the slide pose
+  auto const slide_pose = []{
+	  geometry_msgs::msg::PoseStamped msg;
+    msg.header.frame_id = "world";
+	  
+    // Define roll, pitch, and yaw angles in radians
+	  double roll = 0.0;  // Rotation around the x-axis
+	  double pitch = M_PI/2.0;  // Rotation around the y-axis (90 degrees)
+	  double yaw = 0.0;  // Rotation around the z-axis
+	  // Convert roll, pitch, yaw to quaternion
+	  tf2::Quaternion q;
+	  q.setRPY(roll, pitch, yaw);
+
+	  msg.pose.orientation.x = q.x();
+    msg.pose.orientation.y = q.y();
+    msg.pose.orientation.z = q.z();
+    msg.pose.orientation.w = q.w();
+	  msg.pose.position.x = 0.5;
+	  msg.pose.position.y = -0.15;  //to 10mm slide move
+	  msg.pose.position.z = 0.0;
+	  return msg;
+	}();
+  
+  // Move to target pose
+  auto move_to_slide = std::make_unique<mtc::stages::MoveTo>("move to slide", cartesian_planner);
+  move_to_slide->setGroup(arm_group_name);
+  move_to_slide->setGoal(slide_pose);
+  task.add(std::move(move_to_slide));
 
   return task;
 }
+
 
 int main(int argc, char** argv)
 {
