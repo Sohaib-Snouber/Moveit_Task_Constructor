@@ -53,6 +53,23 @@ After the initial configuration is complete, run the tutorial example using the 
 ros2 launch mtc_tutorial mtc_tutorial.launch.py
 ```
 
+## Issues
+
+### 1 Unrecognized double number:
+
+When running the application, you might encounter the following error:
+
+```bash
+[rviz2-1] [ERROR] [1717346721.930321592] [moveit_background_processing.background_processing]: Exception caught while processing action 'loadRobotModel': parameter 'robot_description_kinematics.ur5e_arm.kinematics_solver_timeout' has invalid type: Wrong parameter type, parameter {robot_description_kinematics.ur5e_arm.kinematics_solver_timeout} is of type {double}, setting it to {string} is not allowed.
+```
+
+#### Solution:
+
+To fix this issue, you need to set the `LC_NUMERIC` environment variable to `en_US.UTF-8`. You can do this by adding the following line to your `.bashrc` file:
+
+```bash
+export LC_NUMERIC=en_US.UTF-8
+```
 
 ## License
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
