@@ -16,7 +16,10 @@
 #endif
 #include <moveit_msgs/msg/object_color.hpp>
 #include <moveit/move_group_interface/move_group_interface.h>
-
+// for allowing the base link inertia to collide with the surface.
+#include <moveit_msgs/msg/allowed_collision_matrix.h>
+#include <moveit_msgs/msg/allowed_collision_entry.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("mtc_tutorial");
 namespace mtc = moveit::task_constructor;
@@ -168,6 +171,23 @@ void MTCTaskNode::setupPlanningScene()
   // Apply the planning scene
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface;
   planning_scene_interface.applyPlanningScene(planning_scene_msg);
+
+  // Create a RobotModelLoader
+  robot_model_loader::RobotModelLoader robot_model_loader(node_, "robot_description");
+  moveit::core::RobotModelPtr robot_model = robot_model_loader.getModel();
+  planning_scene::PlanningScene planning_scene(robot_model);
+
+  // Modify the ACM to allow collision between base_link_inertia and surface
+  collision_detection::AllowedCollisionMatrix& acm = planning_scene.getAllowedCollisionMatrixNonConst();
+  acm.setEntry("base_link_inertia", "surface", true);
+
+  // Update the planning scene with the modified ACM
+  moveit_msgs::msg::AllowedCollisionMatrix acm_msg;
+  acm.getMessage(acm_msg);
+  planning_scene_msg.allowed_collision_matrix = acm_msg;
+  planning_scene_interface.applyPlanningScene(planning_scene_msg);
+
+  RCLCPP_INFO(LOGGER, "allow collision between base_link_inertia and surface.");
 }
 
 
