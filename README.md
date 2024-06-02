@@ -27,7 +27,7 @@ Clone the repository into your ROS 2 workspace along with the necessary dependen
 
 ```bash
 cd ~/ros2_ws/src
-git clone https://github.com/yourusername/mtc_tutorial.git
+git clone https://github.com/Sohaib-Snouber/mtc_tutorial.git
 git clone https://github.com/Sohaib-Snouber/robot_moveit_config.git
 git clone https://github.com/Sohaib-Snouber/UR5e_robotiq_gripper_RViz.git
 cd ~/ros2_ws
